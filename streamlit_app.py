@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import base64
 
 # --- FONTOS! ---
 # Mielőtt deployolod, másold be ide a Colab notebook által generált ngrok URL-t!
@@ -18,11 +19,11 @@ power_button_placeholder = st.empty()
 if st.session_state.app_started:
     if power_button_placeholder.button("🔴 Rendszer Leállítása", use_container_width=True):
         st.session_state.app_started = False
-        st.experimental_rerun() # Frissíti az oldalt
+        st.rerun() # JAVÍTVA
 else:
     if power_button_placeholder.button("🔌 Rendszer Indítása", use_container_width=True):
         st.session_state.app_started = True
-        st.experimental_rerun() # Frissíti az oldalt
+        st.rerun() # JAVÍTVA
 
 # Ha a rendszer "be van kapcsolva", megjelenik a többi elem
 if st.session_state.app_started:
