@@ -5,7 +5,7 @@ import base64
 # --- FONTOS! ---
 # Mielőtt deployolod, másold be ide a Colab notebook által generált ngrok URL-t!
 # A végén a '/transcribe' rész is kell!
-COLAB_API_URL = ""https://scoreless-robbi-priorly.ngrok-free.dev" -> "http://localhost:5000"/transcribe
+COLAB_API_URL = "https://scoreless-robbi-priorly.ngrok-free.dev" -> "http://localhost:5000"/transcribe
 "
 
 # --- UI FELÉPÍTÉSE ---
