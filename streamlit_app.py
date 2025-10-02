@@ -5,7 +5,7 @@ import base64
 # --- FONTOS! ---
 # Másold be ide a Colab notebook által generált ngrok URL-t!
 # A végén a '/process' rész is kell!
-COLAB_API_URL = "https://scoreless-robbi-priorly.ngrok-free.dev/transcribe"
+COLAB_API_URL = "https://scoreless-robbi-priorly.ngrok-free.dev/process"
 
 # --- UI FELÉPÍTÉSE ---
 st.set_page_config(layout="centered", page_title="Automata Feliratgyár")
