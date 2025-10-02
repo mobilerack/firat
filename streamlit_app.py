@@ -3,10 +3,8 @@ import requests
 import base64
 
 # --- FONTOS! ---
-# Mielőtt deployolod, másold be ide a Colab notebook által generált ngrok URL-t!
-# A végén a '/transcribe' rész is kell!
-COLAB_API_URL = "http://localhost:5000"/transcribe
-
+# A TE SZEMÉLYES COLAB API VÉGPONTOD:
+COLAB_API_URL = "https://scoreless-robbi-priorly.ngrok-free.dev/transcribe"
 
 # --- UI FELÉPÍTÉSE ---
 st.set_page_config(layout="centered", page_title="Feliratkészítő")
@@ -20,11 +18,11 @@ power_button_placeholder = st.empty()
 if st.session_state.app_started:
     if power_button_placeholder.button("🔴 Rendszer Leállítása", use_container_width=True):
         st.session_state.app_started = False
-        st.rerun() # JAVÍTVA
+        st.rerun()
 else:
     if power_button_placeholder.button("🔌 Rendszer Indítása", use_container_width=True):
         st.session_state.app_started = True
-        st.rerun() # JAVÍTVA
+        st.rerun()
 
 # Ha a rendszer "be van kapcsolva", megjelenik a többi elem
 if st.session_state.app_started:
