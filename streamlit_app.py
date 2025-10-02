@@ -3,75 +3,66 @@ import requests
 import base64
 
 # --- FONTOS! ---
-# A TE SZEMÉLYES COLAB API VÉGPONTOD:
+# Másold be ide a Colab notebook által generált ngrok URL-t!
+# A végén a '/process' rész is kell!
 COLAB_API_URL = "https://scoreless-robbi-priorly.ngrok-free.dev/transcribe"
 
 # --- UI FELÉPÍTÉSE ---
-st.set_page_config(layout="centered", page_title="Feliratkészítő")
+st.set_page_config(layout="centered", page_title="Automata Feliratgyár")
+st.title("🤖 Automata Feliratgyár")
+st.write("Tölts fel egy audio/videó fájlt, és a rendszer elkészíti a magyar nyelvű SRT feliratot.")
 
-# A "Power" gomb, ami megjeleníti a felületet
-if 'app_started' not in st.session_state:
-    st.session_state.app_started = False
+uploaded_file = st.file_uploader("Válassz egy fájlt", type=["mp3", "mp4", "wav", "m4a", "ogg"])
+start_button = st.button("Feldolgozás Indítása", type="primary", use_container_width=True, disabled=not uploaded_file)
 
-power_button_placeholder = st.empty()
+if start_button:
+    st.subheader("Élő napló a Colab szerverről:")
+    log_area = st.empty()
+    log_messages = []
 
-if st.session_state.app_started:
-    if power_button_placeholder.button("🔴 Rendszer Leállítása", use_container_width=True):
-        st.session_state.app_started = False
-        st.rerun()
-else:
-    if power_button_placeholder.button("🔌 Rendszer Indítása", use_container_width=True):
-        st.session_state.app_started = True
-        st.rerun()
+    try:
+        files = {'file': (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+        
+        # Streamelő kérés indítása a Colab API-ra
+        response = requests.post(COLAB_API_URL, files=files, stream=True, timeout=900)
+        response.raise_for_status()
 
-# Ha a rendszer "be van kapcsolva", megjelenik a többi elem
-if st.session_state.app_started:
-    st.title("Feliratkészítő")
-
-    # Jobb felső sarok "könyv" gomb a tanításhoz (placeholder)
-    with st.popover("📖 Tanítás"):
-        st.write("Itt lesznek a tanítási opciók.")
-        if st.button("Whisper tanítása"):
-            st.info("Ez a funkció még fejlesztés alatt áll.")
-        if st.button("Fordító tanítása"):
-            st.info("Ez a funkció még fejlesztés alatt áll.")
-
-    # Fő felület
-    uploaded_file = st.file_uploader("1. Válassz egy audio- vagy videófájlt", type=["mp3", "mp4", "wav", "m4a", "ogg"])
-    output_format = st.selectbox("2. Válassz kimeneti formátumot", ('srt', 'vtt'))
-    
-    start_button = st.button("3. Átírás Indítása", type="primary", use_container_width=True)
-
-    if start_button and uploaded_file is not None:
-        with st.spinner("Feldolgozás a Colab GPU-n... Ez a fájl hosszától függően sokáig tarthat..."):
-            try:
-                files = {'file': (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-                payload = {'format': output_format}
+        b64_data = None
+        filename = None
+        
+        # A beérkező stream feldolgozása darabonként
+        for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
+            lines = chunk.split('\n')
+            for line in lines:
+                if not line.strip():
+                    continue
                 
-                response = requests.post(COLAB_API_URL, files=files, data=payload, timeout=900) # 15 perces timeout
-                response.raise_for_status()
-                
-                result_data = response.json()
-                
-                if "result" in result_data:
-                    st.session_state.result_text = result_data["result"]
-                    st.session_state.filename = f"{uploaded_file.name.split('.')[0]}.{output_format}"
-                    st.success("Átírás kész!")
-                else:
-                    st.error(f"Hiba a szerver oldalon: {result_data.get('error', 'Ismeretlen hiba')}")
+                prefix, _, content = line.partition(':')
+                content = content.strip()
 
-            except requests.exceptions.RequestException as e:
-                st.error(f"Kommunikációs hiba a Colab szerverrel: {e}")
-                st.info("Tipp: Biztos, hogy a Colab notebook még fut, és a helyes ngrok URL van beállítva a kódban?")
-            except Exception as e:
-                st.error(f"Váratlan hiba: {e}")
+                if prefix == 'LOG':
+                    log_messages.append(f"> {content}")
+                    log_area.text_area("Napló:", "\n".join(log_messages), height=300)
+                elif prefix == 'DATA':
+                    b64_data = content
+                elif prefix == 'FILENAME':
+                    filename = content
+        
+        if b64_data and filename:
+            st.success("Feldolgozás kész! A felirat letölthető.")
+            decoded_content = base64.b64decode(b64_data)
+            
+            st.download_button(
+                label="Kész Magyar Felirat Letöltése",
+                data=decoded_content,
+                file_name=f"magyar_{os.path.splitext(filename)[0]}.srt",
+                mime='application/x-subrip'
+            )
+        else:
+            st.error("A szerver nem küldött letölthető fájlt.")
 
-    # Eredmény és letöltés gomb megjelenítése
-    if 'result_text' in st.session_state:
-        st.text_area("Eredmény:", st.session_state.result_text, height=300)
-        st.download_button(
-            label="Letöltés",
-            data=st.session_state.result_text.encode('utf-8'),
-            file_name=st.session_state.filename,
-            mime=f'text/{output_format}'
-        )
+    except requests.exceptions.RequestException as e:
+        st.error(f"Kommunikációs hiba a Colab szerverrel: {e}")
+        st.info("Tipp: Biztos, hogy a Colab notebook még fut, és a helyes ngrok URL van beállítva?")
+    except Exception as e:
+        st.error(f"Váratlan hiba: {e}")
