@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import base64
-import os # Szükséges az os.path.splitext-hez
+import os
 
 # --- FONTOS! ---
 # Másold be ide a Colab notebook által generált ngrok URL-t!
@@ -22,11 +22,17 @@ if start_button:
     log_messages = []
 
     try:
-        files = {'file': (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+        # ---- JAVÍTOTT, BIZTONSÁGOS FÁJLKEZELÉS ----
+        # 1. Olvassuk be a fájl tartalmát egy változóba AZONNAL.
+        file_bytes = uploaded_file.getvalue()
         
-        # Streamelő kérés indítása a Colab API-ra
-        response = requests.post(COLAB_API_URL, files=files, stream=True, timeout=900)
-        response.raise_for_status()
+        # 2. A requests-nek már a memóriában lévő bájtokat adjuk át, nem a Streamlit objektumot.
+        files_payload = {'file': (uploaded_file.name, file_bytes, uploaded_file.type)}
+        
+        with st.spinner("Csatlakozás a Colab szerverhez..."):
+            # Streamelő kérés indítása a Colab API-ra
+            response = requests.post(COLAB_API_URL, files=files_payload, stream=True, timeout=900)
+            response.raise_for_status()
 
         b64_data = None
         filename = None
@@ -38,7 +44,6 @@ if start_button:
                 if not line.strip():
                     continue
                 
-                # Biztosítjuk, hogy a vonalnak van ':' karaktere
                 if ':' in line:
                     prefix, _, content = line.partition(':')
                     content = content.strip()
@@ -68,5 +73,5 @@ if start_button:
         st.error(f"Kommunikációs hiba a Colab szerverrel: {e}")
         st.info("Tipp: Biztos, hogy a Colab notebook még fut, és a helyes ngrok URL van beállítva?")
     except Exception as e:
-        st.error(f"Váratlan hiba: {e}")
+        st.error(f"KRITIKUS HIBA: {e}")
 
